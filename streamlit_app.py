@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import pydeck as pdk
 import json
 import math
 import random
@@ -483,195 +484,85 @@ def get_location_coords(location_name):
 def generate_eta():
     return random.randint(3, 12)
 
-def generate_map_html(center_lat, center_lng, markers=None, route=None, show_pickup=False, show_dropoff=False, pickup=None, dropoff=None, passenger_marker=None):
+def render_pydeck_map(center_lat, center_lng, markers=None, route=None, pickup=None, dropoff=None, passenger_marker=None, height=500):
     if markers is None:
         markers = []
-    
-    markers_json = json.dumps(markers)
-    route_json = json.dumps(route) if route else "null"
-    pickup_json = json.dumps(pickup) if pickup else "null"
-    dropoff_json = json.dumps(dropoff) if dropoff else "null"
-    passenger_json = json.dumps(passenger_marker) if passenger_marker else "null"
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style>
-            body {{ margin: 0; padding: 0; background: #0a0a0a; }}
-            #map {{ width: 100%; height: 600px; }}
-            .custom-marker {{
-                background: #00b140;
-                border: 3px solid white;
-                border-radius: 50%;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            }}
-            .driver-marker {{
-                background: #00b140;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                border: 2px solid white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                color: white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            }}
-            .passenger-marker {{
-                background: #2196f3;
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                border: 3px solid white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px;
-                color: white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                animation: pulse 2s infinite;
-            }}
-            .pickup-marker {{
-                background: #00b140;
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                border: 3px solid white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px;
-                color: white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            }}
-            .dropoff-marker {{
-                background: #ff4444;
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                border: 3px solid white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px;
-                color: white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            }}
-            @keyframes pulse {{
-                0% {{ transform: scale(1); }}
-                50% {{ transform: scale(1.1); }}
-                100% {{ transform: scale(1); }}
-            }}
-            .leaflet-control-zoom a {{
-                background: #1a1a1a !important;
-                color: white !important;
-                border-color: #2a2a2a !important;
-            }}
-            .leaflet-control-zoom a:hover {{
-                background: #2a2a2a !important;
-            }}
-        </style>
-    </head>
-    <body>
-        <div id="map"></div>
-        <script>
-            var map = L.map('map', {{
-                zoomControl: true,
-                attributionControl: false
-            }}).set([{center_lat}, {center_lng}], 13);
-            
-            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }}).addTo(map);
-            
-            var markers = {markers_json};
-            var route = {route_json};
-            var pickup = {pickup_json};
-            var dropoff = {dropoff_json};
-            var passenger = {passenger_json};
-            
-            markers.forEach(function(m) {{
-                var icon = L.divIcon({{
-                    className: 'driver-marker',
-                    html: '🚕',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                }});
-                L.marker([m.lat, m.lng], {{icon: icon}}).addTo(map)
-                    .bindPopup('<b>' + m.name + '</b><br>' + m.car + '<br>⭐ ' + m.rating);
-            }});
-            
-            if (passenger) {{
-                var icon = L.divIcon({{
-                    className: 'passenger-marker',
-                    html: '📍',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                }});
-                L.marker([passenger.lat, passenger.lng], {{icon: icon}}).addTo(map)
-                    .bindPopup('<b>A sua localização</b>');
-            }}
-            
-            if (pickup) {{
-                var icon = L.divIcon({{
-                    className: 'pickup-marker',
-                    html: '🟢',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                }});
-                L.marker([pickup.lat, pickup.lng], {{icon: icon}}).addTo(map)
-                    .bindPopup('<b>Local de recolha</b>');
-            }}
-            
-            if (dropoff) {{
-                var icon = L.divIcon({{
-                    className: 'dropoff-marker',
-                    html: '🔴',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                }});
-                L.marker([dropoff.lat, dropoff.lng], {{icon: icon}}).addTo(map)
-                    .bindPopup('<b>Destino</b>');
-            }}
-            
-            if (route && route.length > 0) {{
-                L.polyline(route, {{
-                    color: '#00b140',
-                    weight: 4,
-                    opacity: 0.8,
-                    dashArray: '10, 10'
-                }}).addTo(map);
-            }}
-            
-            map.on('click', function(e) {{
-                var data = {{
-                    lat: e.latlng.lat,
-                    lng: e.latlng.lng
-                }};
-                window.parent.postMessage({{type: 'map_click', data: data}}, '*');
-            }});
-            
-            var bounds = [];
-            if (passenger) bounds.push([passenger.lat, passenger.lng]);
-            if (pickup) bounds.push([pickup.lat, pickup.lng]);
-            if (dropoff) bounds.push([dropoff.lat, dropoff.lng]);
-            markers.forEach(function(m) {{ bounds.push([m.lat, m.lng]); }});
-            
-            if (bounds.length > 1) {{
-                map.fitBounds(bounds, {{padding: [50, 50]}});
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    return html
+
+    layers = []
+
+    if markers:
+        driver_data = [{"lat": m["lat"], "lng": m["lng"], "name": m["name"], "car": m["car"], "rating": str(m["rating"])} for m in markers]
+        layers.append(pdk.Layer(
+            "ScatterplotLayer",
+            data=driver_data,
+            get_position=["lng", "lat"],
+            get_radius=80,
+            get_fill_color=[0, 177, 64, 200],
+            pickable=True,
+            auto_highlight=True,
+        ))
+
+    if passenger_marker:
+        passenger_data = [{"lat": passenger_marker["lat"], "lng": passenger_marker["lng"], "name": "A sua localização"}]
+        layers.append(pdk.Layer(
+            "ScatterplotLayer",
+            data=passenger_data,
+            get_position=["lng", "lat"],
+            get_radius=120,
+            get_fill_color=[33, 150, 243, 220],
+            pickable=True,
+        ))
+
+    if pickup:
+        pickup_data = [{"lat": pickup["lat"], "lng": pickup["lng"], "name": "Local de recolha"}]
+        layers.append(pdk.Layer(
+            "ScatterplotLayer",
+            data=pickup_data,
+            get_position=["lng", "lat"],
+            get_radius=100,
+            get_fill_color=[0, 200, 83, 220],
+            pickable=True,
+        ))
+
+    if dropoff:
+        dropoff_data = [{"lat": dropoff["lat"], "lng": dropoff["lng"], "name": "Destino"}]
+        layers.append(pdk.Layer(
+            "ScatterplotLayer",
+            data=dropoff_data,
+            get_position=["lng", "lat"],
+            get_radius=100,
+            get_fill_color=[255, 68, 68, 220],
+            pickable=True,
+        ))
+
+    if route and len(route) >= 2:
+        route_coords = [[r[1], r[0]] for r in route]
+        route_data = [{"path": route_coords}]
+        layers.append(pdk.Layer(
+            "PathLayer",
+            data=route_data,
+            get_path="path",
+            get_color=[0, 177, 64, 180],
+            width_min_pixels=4,
+            get_width=5,
+        ))
+
+    tooltip = {"text": "{name}"}
+
+    view = pdk.ViewState(
+        latitude=center_lat,
+        longitude=center_lng,
+        zoom=13,
+        pitch=0,
+    )
+
+    deck = pdk.Deck(
+        layers=layers,
+        initial_view_state=view,
+        tooltip=tooltip,
+    )
+
+    st.pydeck_chart(deck, use_container_width=True, height=height)
 
 def create_admin_chart_html(data, labels):
     if not data:
@@ -798,17 +689,16 @@ def render_passenger_view():
                 [dropoff_coords["lat"], dropoff_coords["lng"]]
             ]
         
-        map_html = generate_map_html(
+        render_pydeck_map(
             st.session_state.passenger_location["lat"],
             st.session_state.passenger_location["lng"],
             markers=driver_markers,
             route=route,
             pickup=pickup_coords,
             dropoff=dropoff_coords,
-            passenger_marker=passenger_marker
+            passenger_marker=passenger_marker,
+            height=500
         )
-        
-        st.components.v1.html(map_html, height=600, scrolling=False)
     
     with col_form:
         if st.session_state.ride_status is None:
@@ -1541,12 +1431,12 @@ def render_admin_view():
                     "rating": d["rating"]
                 })
         
-        map_html = generate_map_html(
+        render_pydeck_map(
             LUANDA_CENTER["lat"],
             LUANDA_CENTER["lng"],
-            markers=driver_markers
+            markers=driver_markers,
+            height=350
         )
-        st.components.v1.html(map_html, height=350, scrolling=False)
     
     with col_rides:
         st.markdown("""
