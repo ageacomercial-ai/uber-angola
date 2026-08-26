@@ -503,7 +503,7 @@ def generate_map_html(center_lat, center_lng, markers=None, route=None, show_pic
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
             body {{ margin: 0; padding: 0; background: #0a0a0a; }}
-            #map {{ width: 100%; height: 100vh; }}
+            #map {{ width: 100%; height: 600px; }}
             .custom-marker {{
                 background: #00b140;
                 border: 3px solid white;
@@ -808,7 +808,7 @@ def render_passenger_view():
             passenger_marker=passenger_marker
         )
         
-        st.components.v1.html(map_html, height=500, scrolling=False)
+        st.components.v1.html(map_html, height=600, scrolling=False)
     
     with col_form:
         if st.session_state.ride_status is None:
